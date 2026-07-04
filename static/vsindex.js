@@ -9,7 +9,6 @@ let totalPlaces;
 let type;
 let regionName;
 let uids = [];
-let host_uid;
 window.addEventListener("DOMContentLoaded", async () => {
     async function fetchGeoJSON(type) {
         const res = await fetch("/placenamegame/typemap");
@@ -214,8 +213,7 @@ window.addEventListener("DOMContentLoaded", async () => {
                         document.getElementById("timeLimitPlural").textContent = "s";
                     }
 
-                host_uid = data.host_uid;
-                if (uid === host_uid) {
+                if (data.is_host) {
                     document.getElementById("timeLimitSlider").disabled = false;
                     document.getElementById("timeLimitSlider").style.display = "block";
                     document.getElementById("timeLimitSlider").addEventListener("input", (event) => {

@@ -305,7 +305,7 @@ def create_room(type: str, uid_json: Annotated[str | None, Cookie()] = None):
 
     room_id = str(random.randint(0, 999999)).zfill(6)
 
-    room_data = {"type": type, "host_uid": uid, "players": {uid: {"name": "Anonymous", "websockets": [], "guesses": [], "count": 0}}, "status": "waiting", "time_limit": 5, "created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "started_at": None}
+    room_data = {"type": type, "host_uid": uid, "players": {uid: {"name": "Anonymous", "websockets": [], "guesses": [], "count": 0}}, "status": "waiting", "time_limit": 5, "created_at": datetime.datetime.now().timestamp(), "started_at": None}
     # with open(f"gamedata/room_{room_id}.json", "w") as f:
     #     json.dump(room_data, f)
     rooms[room_id] = room_data
@@ -378,7 +378,7 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
     else:
         # await websocket.send_json({"message": "Connected to room", "room_id": room_id, "type": type, "uid": uid})
         room_data["players"][uid]["websockets"].append(websocket)  # Initialise the player's data in the room
-        await websocket.send_json({"code":"INIT", "room_id": room_id, "type": room_data["type"], "host_uid": room_data["host_uid"], "status": room_data["status"], "time_limit": room_data["time_limit"], "started_at": room_data["started_at"], "name": room_data["players"][uid]["name"], "uid": uid})
+        await websocket.send_json({"code":"INIT", "room_id": room_id, "type": room_data["type"], "is_host": room_data["host_uid"] == uid, "status": room_data["status"], "time_limit": room_data["time_limit"], "started_at": room_data["started_at"], "name": room_data["players"][uid]["name"], "uid": uid})
         for userid in room_data["players"]:
             # Send a JOIN message to all players in the room about the new player
             for ws in room_data["players"][userid]["websockets"]:
@@ -392,6 +392,9 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
         while True:
             data = await websocket.receive_json()
             if data.get("code") == "NAME_CHANGE":
+                if room_data["status"] != "waiting":
+                    await websocket.send_json({"error": "Cannot change name after game has started"})
+                    continue
                 new_name = data.get("name", "Anonymous")
                 room_data["players"][uid]["name"] = new_name
                 rooms[room_id] = room_data  # Update the room data with the new name
@@ -401,6 +404,9 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                         for ws in room_data["players"][userid]["websockets"]:
                             await ws.send_json({"code":"NAME_CHANGE", "uid": uid, "name": new_name})
             elif data.get("code") == "SET_TIME_LIMIT":
+                if room_data["status"] != "waiting":
+                    await websocket.send_json({"error": "Cannot set time limit after game has started"})
+                    continue
                 if uid == room_data["host_uid"]:
                     new_time_limit = data.get("time_limit", 5)
                     room_data["time_limit"] = new_time_limit
@@ -411,17 +417,21 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                             await ws.send_json({"code":"SET_TIME_LIMIT", "time_limit": new_time_limit})
             elif data.get("code") == "START_GAME":
                 if uid == room_data["host_uid"]:
+                    if room_data["status"] != "waiting":
+                        await websocket.send_json({"error": "Game has already started"})
+                        continue
                     room_data["status"] = "in_progress"
-                    room_data["started_at"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    room_data["started_at"] = datetime.datetime.now().timestamp()
                     rooms[room_id] = room_data  # Update the room data with the new status
                     # Broadcast the game start to all players in the room
+                    i = 0
                     for userid in room_data["players"]:
                         for ws in room_data["players"][userid]["websockets"]:
                             await ws.send_json({"code":"START_GAME", "started_at": room_data["started_at"]})
                 
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for room {room_id}")
-        room_data = rooms[room_id]
+        # room_data = rooms[room_id]
 
         if uid in room_data["players"]:
             if websocket in room_data["players"][uid]["websockets"]:
@@ -430,7 +440,7 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
             if room_data["status"] == "waiting" and not room_data["players"][uid]["websockets"]:
                 # If the player has no more active websockets, remove them from the room
                 # del room_data["players"][uid]
-                rooms[room_id] = room_data  # Update the room data after removing the player
+                # rooms[room_id] = room_data  # Update the room data after removing the player
                 # Broadcast to all remaining players that this player has left
                 for userid in room_data["players"]:
                     for ws in room_data["players"][userid]["websockets"]:
