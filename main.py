@@ -280,7 +280,7 @@ def game(request: Request, type: str):
 
 
 rooms = {}
-COLOURS = ["rgba(240,163,255,0.5)", "rgba(0,117,220,0.5)", "rgba(153,63,0,0.5)", "rgba(76,0,92,0.5)", "rgba(25,25,25,0.5)", "rgba(0,92,49,0.5)", "rgba(43,206,72,0.5)", "rgba(255,204,153,0.5)", "rgba(128,128,128,0.5)", "rgba(148,255,181,0.5)", "rgba(143,124,0,0.5)", "rgba(157,204,0,0.5)", "rgba(194,0,136,0.5)", "rgba(0,51,128,0.5)", "rgba(255,164,5,0.5)", "rgba(255,168,187,0.5)", "rgba(66,102,0,0.5)", "rgba(255,0,16,0.5)", "rgba(94,241,242,0.5)", "rgba(0,153,143,0.5)", "rgba(224,255,102,0.5)", "rgba(116,10,255,0.5)", "rgba(153,0,0,0.5)", "rgba(255,255,128,0.5)", "rgba(255,255,0,0.5)", "rgba(255,80,5,0.5)"]
+COLOURS = ["rgba(255,0,0,0.5)", "rgba(0,127,0,0.5)", "rgba(0,0,255,0.5)", "rgba(0,117,220,0.5)", "rgba(153,63,0,0.5)", "rgba(76,0,92,0.5)", "rgba(0,92,49,0.5)", "rgba(128,128,128,0.5)", "rgba(157,204,0,0.5)", "rgba(194,0,136,0.5)", "rgba(0,51,128,0.5)", "rgba(255,168,187,0.5)", "rgba(0,153,143,0.5)", "rgba(255, 102, 0, 0.5)", "rgba(153,0,0,0.5)", "rgba(240,163,255,0.5)"]
 
 @app.get("/vs")
 def vs(request: Request):
@@ -378,7 +378,8 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
     else:
         # await websocket.send_json({"message": "Connected to room", "room_id": room_id, "type": type, "uid": uid})
         room_data["players"][uid]["websockets"].append(websocket)  # Initialise the player's data in the room
-        await websocket.send_json({"code":"INIT", "room_id": room_id, "type": room_data["type"], "is_host": room_data["host_uid"] == uid, "status": room_data["status"], "time_limit": room_data["time_limit"], "started_at": room_data["started_at"], "name": room_data["players"][uid]["name"], "uid": uid})
+        await websocket.send_json({"code":"INIT", "room_id": room_id, "type": room_data["type"], "is_host": room_data["host_uid"] == uid, "status": room_data["status"], "time_limit": room_data["time_limit"], "started_at": room_data["started_at"], "name": room_data["players"][uid]["name"], "uid": uid, "colour": COLOURS[list(room_data["players"].keys()).index(uid) % len(COLOURS)]})
+        # await websocket.send_json({"code":"INIT", "room_id": room_id, "type": room_data["type"], "is_host": room_data["host_uid"] == uid, "status": room_data["status"], "time_limit": room_data["time_limit"], "started_at": room_data["started_at"], "name": room_data["players"][uid]["name"], "uid": uid})
         for userid in room_data["players"]:
             # Send a JOIN message to all players in the room about the new player
             for ws in room_data["players"][userid]["websockets"]:
@@ -426,9 +427,63 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                     # Broadcast the game start to all players in the room
                     i = 0
                     for userid in room_data["players"]:
+                        if len(room_data["players"][userid]["websockets"]) == 0:
+                            # If the player has no more active websockets, remove them from the room before start
+                            del room_data["players"][userid]
+                            rooms[room_id] = room_data  # Update the room data after removing the player
                         for ws in room_data["players"][userid]["websockets"]:
-                            await ws.send_json({"code":"START_GAME", "started_at": room_data["started_at"]})
+                            await ws.send_json({"code":"START_GAME", "started_at": room_data["started_at"], "time_limit": room_data["time_limit"], "colour": COLOURS[i % len(COLOURS)], "uid": userid})
+                        i += 1
+            
+            elif data.get("code") == "GUESS":
+                if datetime.datetime.now().timestamp() - room_data["started_at"] > room_data["time_limit"]*60:
+                    await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": False, "message": "Time's up!"})
+                    continue
+                text = data.get("text", "")
+                colour = data.get("colour", "")
+                with open("typemap.json", "r") as f:
+                    typemap = json.load(f)
+                typedata = typemap.get(type, [])
+                if not typedata:
+                    return JSONResponse(content={"error": "Invalid type"}, status_code=400)
+                valid_counties = typedata.get("valid-counties", [])
+                if len(valid_counties) == 1:
+                    valid_counties.append("Penis") # fucking sqlite hates single elements in IN statements so need to add garbage
+                con = sqlite3.connect("data.db")
+                cur = con.cursor()
+                text = text.replace(" ", "").replace("-", "").replace("'", "").replace(".", "").lower()
+                cur.execute(f"SELECT name, lat, lon, county FROM data WHERE name_norm LIKE '%//{text}//%' AND county IN {tuple(valid_counties)}")
+                results = cur.fetchall()
+                con.close()
+                print(results)
+                results_list = []
+                already_guessed = False
+                flag = False
+                for result in results:
+                    res_json = {"name": result[0], "lat": result[1], "lon": result[2], "county": result[3]}
+                    if res_json not in room_data["players"][uid]["guesses"]:
+                        for userid in room_data["players"]:
+                            if res_json in room_data["players"][userid]["guesses"]:
+                                flag = True
+                                break
+                        if not flag:
+                            room_data["players"][uid]["guesses"].append(res_json)
+                            room_data["players"][uid]["count"] += 1
+                            results_list.append(res_json)
+                    else:
+                        already_guessed = True
+                rooms[room_id] = room_data  # Update the room data with the new guesses
                 
+                if len(results_list) == 0 and not (already_guessed or flag):
+                    await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": False, "message": "Place not found!"})
+                elif len(results_list) == 0 and already_guessed:
+                    await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": True, "message": "Already guessed!"})
+                elif len(results_list) == 0 and flag:
+                    await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": False, "message": "Already guessed by another player!"})
+                else:
+                    for userid in room_data["players"]:
+                        for ws in room_data["players"][userid]["websockets"]:
+                            await ws.send_json({"code":"GUESS", "results": results_list, "already_guessed": already_guessed, "uid": uid, "is_self": userid == uid, "colour": colour, "name": room_data["players"][uid]["name"]})
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for room {room_id}")
         # room_data = rooms[room_id]

@@ -9,6 +9,9 @@ let totalPlaces;
 let type;
 let regionName;
 let uids = [];
+var ws;
+let colour;
+let i = 0;
 window.addEventListener("DOMContentLoaded", async () => {
     async function fetchGeoJSON(type) {
         const res = await fetch("/placenamegame/typemap");
@@ -48,8 +51,7 @@ window.addEventListener("DOMContentLoaded", async () => {
             .attr("stroke-width", 0.5);
 
         }
-    function addToMap(place) {
-
+    function addToMap(place, colour) {
         const [x, y] = projection([
             place.longitude,
             place.latitude
@@ -59,7 +61,7 @@ window.addEventListener("DOMContentLoaded", async () => {
             .attr("cx", x)
             .attr("cy", y)
             .attr("r", 3)
-            .attr("fill", "rgba(255, 0, 0, 0.5)");
+            .attr("fill", colour);
     }
     
     function highlightPlace(id,lat, lon){
@@ -76,7 +78,7 @@ window.addEventListener("DOMContentLoaded", async () => {
             .attr("fill", "rgb(7, 163, 7)");
     }
 
-    function addToTable(place, county){
+    function addToTable(username, place, county){
         const name = place.name;
         const table = document.getElementById("placesTable");
         const row = table.insertRow(0);
@@ -109,61 +111,14 @@ window.addEventListener("DOMContentLoaded", async () => {
             }
         });
     }
-    function addPlace(place){
-        addToMap({ latitude: place.lat, longitude: place.lon });
+    function addPlace(place, username, colour){
+        addToMap({ latitude: place.lat, longitude: place.lon }, colour);
+        // COLOURS = ["rgba(255,0,0,0.5)", "rgba(0,127,0,0.5)", "rgba(0,0,255,0.5)", "rgba(0,117,220,0.5)", "rgba(153,63,0,0.5)", "rgba(76,0,92,0.5)", "rgba(0,92,49,0.5)", "rgba(128,128,128,0.5)", "rgba(157,204,0,0.5)", "rgba(194,0,136,0.5)", "rgba(0,51,128,0.5)", "rgba(240,84,104,0.5)", "rgba(0,153,143,0.5)", "rgba(255, 102, 0, 0.5)", "rgba(153,0,0,0.5)",  "rgba(240,163,255,0.5)"]
+        // addToMap({ latitude: place.lat, longitude: place.lon }, COLOURS[i]);
+        // i++;
         numPlaces++;
-        addToTable(place, place.county);
+        addToTable(username, place, place.county);
     }
-
-    async function processPlaceInput() {
-        const placeInput = document.getElementById("placeInput");
-        const placeName = placeInput.value.trim();
-        if (enteredPlaces.includes(placeName.toLowerCase().trim().replaceAll(" ",""))) {
-            document.getElementById("message").textContent = "Place already entered!";
-            return;
-        }
-        document.getElementById("message").textContent = "⠀";
-        if (placeName.length >= 2) {
-            const response = await fetch(`/placenamegame/query?text=${encodeURIComponent(placeName)}&type=${type}`, { credentials: 'include' });
-            if (!response.ok) {
-                console.error("Failed to query place");
-                return;
-            }
-            const places = await response.json();
-            console.log(places);
-            if (!places.results || places.results.length === 0) {
-                document.getElementById("message").textContent = "Place not found!";
-            }
-            if (places.results.length > 0) {
-                // console.log("beep");
-                for (const place of places.results) {
-                    addPlace(place);
-                    document.getElementById("placesHeader").textContent = `Places Entered: ${numPlaces} / ${totalPlaces}`;
-                }
-                enteredPlaces.push(placeName.toLowerCase().trim().replaceAll(" ",""));
-                placeInput.value = "";
-            } else if (places.already_guessed) {
-                document.getElementById("message").textContent = "Place already entered!";
-            }
-        } else {
-            document.getElementById("message").textContent = "Place not found!";
-        }
-    }
-
-    document.getElementById("placeInput").addEventListener("keypress", async (event) => {
-        if (event.key !== "Enter") return;
-        document.getElementById("placeInput").disabled = true;
-        await processPlaceInput();
-        document.getElementById("placeInput").disabled = false;
-        document.getElementById("placeInput").focus();
-
-    });
-    document.getElementById("placeSubmitButton").addEventListener("click", async () => {
-        document.getElementById("placeInput").disabled = true;
-        await processPlaceInput();
-        document.getElementById("placeInput").disabled = false;
-        document.getElementById("placeInput").focus();
-    });
 
 
     async function init(){
@@ -172,20 +127,52 @@ window.addEventListener("DOMContentLoaded", async () => {
         type = searchParams.get("type")|| "uk";
         roomId = searchParams.get("room_id");
         await drawMap();
-        // const response = await fetch(`/placenamegame/init?type=${type}`, { credentials: 'include' });
-        // if (!response.ok) {
-        //     console.error("Failed to initialize session");
-        //     return;
-        // }
-        // const data = await response.json();
-        // for (const place of data.guesses) {
-        //     addPlace(place);
-        //     enteredPlaces.push(place.name.toLowerCase().trim().replaceAll(" ",""));
-        // }
-        // if (data.name && data.name.trim() !== "Anonymous") {
-        //     document.getElementById("nameInput").value = data.name || "";
-        // }
-        var ws = new WebSocket(`ws://${window.location.host}/placenamegame/vs/room/${roomId}`);
+        ws = new WebSocket(`ws://${window.location.host}/placenamegame/vs/room/${roomId}`);
+
+        async function processPlaceInput() {
+            const placeInput = document.getElementById("placeInput");
+            const placeName = placeInput.value.trim();
+            document.getElementById("placeInput").disabled = true;
+            document.getElementById("placeSubmitButton").disabled = true;
+            if (enteredPlaces.includes(placeName.toLowerCase().trim().replaceAll(" ",""))) {
+                document.getElementById("message").textContent = "Place already entered!";
+                document.getElementById("placeSubmitButton").disabled = false;
+                document.getElementById("placeInput").disabled = false;
+                return;
+            }
+            document.getElementById("message").textContent = "⠀";
+            if (placeName.length >= 2) {
+                ws.send(JSON.stringify({code: "GUESS", text: placeName, colour: colour}));
+            } else {
+                document.getElementById("message").textContent = "Place not found!";
+                document.getElementById("placeSubmitButton").disabled = false;
+                document.getElementById("placeInput").disabled = false;
+            }
+        }
+
+        function switchToGameplay(){
+            document.getElementById("roomInfo").style.display = "none";
+            document.getElementById("gameplay").style.display = "block";
+            document.getElementById("placeInput").disabled = false;
+            document.getElementById("placeSubmitButton").disabled = false;
+            document.getElementById("placeInput").focus();
+
+            
+            document.getElementById("placeInput").addEventListener("keypress", async (event) => {
+                if (event.key !== "Enter") return;
+                document.getElementById("placeInput").disabled = true;
+                await processPlaceInput();
+                document.getElementById("placeInput").disabled = false;
+                document.getElementById("placeInput").focus();
+
+            });
+            document.getElementById("placeSubmitButton").addEventListener("click", async () => {
+                document.getElementById("placeInput").disabled = true;
+                await processPlaceInput();
+                document.getElementById("placeInput").disabled = false;
+                document.getElementById("placeInput").focus();
+            });
+        }
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
             console.log(`"${data.code}" message received:`, data);
@@ -193,55 +180,60 @@ window.addEventListener("DOMContentLoaded", async () => {
                 const playerName = data.name;
                 const uid = data.uid;
                 uids.push(uid);
-                const playerList = document.getElementById("playerList");
-                playerList.innerHTML = "";
-                const li = document.createElement("li");
-                li.innerHTML = `<input type = "text" id="playerNameInput" value="${playerName}">`
-                playerList.appendChild(li);
-                li.addEventListener("input", async (event) => {
-                    const newName = event.target.value.trim();
-                    ws.send(JSON.stringify({code: "NAME_CHANGE", name: newName}));
-                });
-                document.getElementById("leaveRoomLink").addEventListener("click", () => {
-                    ws.close();
-                });
-                
-                document.getElementById("timeLimitValue").textContent = data.time_limit;
-                    if (data.time_limit == 1) {
-                        document.getElementById("timeLimitPlural").textContent = "";
-                    } else {
-                        document.getElementById("timeLimitPlural").textContent = "s";
+                if (data.status == "waiting") {
+                    const playerList = document.getElementById("playerList");
+                    playerList.innerHTML = "";
+                    const li = document.createElement("li");
+                    li.innerHTML = `<input type = "text" id="playerNameInput" value="${playerName}">`
+                    playerList.appendChild(li);
+                    li.addEventListener("input", async (event) => {
+                        const newName = event.target.value.trim();
+                        ws.send(JSON.stringify({code: "NAME_CHANGE", name: newName}));
+                    });
+                    document.getElementById("leaveRoomLink").addEventListener("click", () => {
+                        ws.close();
+                    });
+                    
+                    document.getElementById("timeLimitValue").textContent = data.time_limit;
+                        if (data.time_limit == 1) {
+                            document.getElementById("timeLimitPlural").textContent = "";
+                        } else {
+                            document.getElementById("timeLimitPlural").textContent = "s";
+                        }
+
+                    if (data.is_host) {
+                        document.getElementById("timeLimitSlider").disabled = false;
+                        document.getElementById("timeLimitSlider").style.display = "block";
+                        document.getElementById("timeLimitSlider").addEventListener("input", (event) => {
+                            const timeLimit = event.target.value;
+                            document.getElementById("timeLimitValue").textContent = timeLimit;
+                            if (timeLimit == 1) {
+                                document.getElementById("timeLimitPlural").textContent = "";
+                            } else {
+                                document.getElementById("timeLimitPlural").textContent = "s";
+                            }
+                        });
+                        document.getElementById("timeLimitSlider").addEventListener("change", async (event) => {
+                            const timeLimit = event.target.value;
+                            document.getElementById("timeLimitValue").textContent = timeLimit;
+                            if (timeLimit == 1) {
+                                document.getElementById("timeLimitPlural").textContent = "";
+                            } else {
+                                document.getElementById("timeLimitPlural").textContent = "s";
+                            }
+                            // only send the message once the user has finished adjusting the slider (on change event)
+                            ws.send(JSON.stringify({code: "SET_TIME_LIMIT", time_limit: timeLimit}));
+                        });
+
+                        document.getElementById("startGameButton").disabled = false;
+                        document.getElementById("startGameButton").style.display = "block";
+                        document.getElementById("startGameButton").addEventListener("click", () => {
+                            ws.send(JSON.stringify({code: "START_GAME"}));
+                        });
                     }
-
-                if (data.is_host) {
-                    document.getElementById("timeLimitSlider").disabled = false;
-                    document.getElementById("timeLimitSlider").style.display = "block";
-                    document.getElementById("timeLimitSlider").addEventListener("input", (event) => {
-                        const timeLimit = event.target.value;
-                        document.getElementById("timeLimitValue").textContent = timeLimit;
-                        if (timeLimit == 1) {
-                            document.getElementById("timeLimitPlural").textContent = "";
-                        } else {
-                            document.getElementById("timeLimitPlural").textContent = "s";
-                        }
-                    });
-                    document.getElementById("timeLimitSlider").addEventListener("change", async (event) => {
-                        const timeLimit = event.target.value;
-                        document.getElementById("timeLimitValue").textContent = timeLimit;
-                        if (timeLimit == 1) {
-                            document.getElementById("timeLimitPlural").textContent = "";
-                        } else {
-                            document.getElementById("timeLimitPlural").textContent = "s";
-                        }
-                        // only send the message once the user has finished adjusting the slider (on change event)
-                        ws.send(JSON.stringify({code: "SET_TIME_LIMIT", time_limit: timeLimit}));
-                    });
-
-                    document.getElementById("startGameButton").disabled = false;
-                    document.getElementById("startGameButton").style.display = "block";
-                    document.getElementById("startGameButton").addEventListener("click", () => {
-                        ws.send(JSON.stringify({code: "START_GAME"}));
-                    });
+                } else if (data.status == "in_progress") {
+                    switchToGameplay();
+                    colour = data.colour;
                 }
             }
             if (data.code == "NAME_CHANGE") {
@@ -278,12 +270,37 @@ window.addEventListener("DOMContentLoaded", async () => {
                     uids = uids.filter(uid => uid !== data.uid);
                 }
             }
+            if (data.code == "START_GAME") {
+                switchToGameplay();
+                colour = data.colour;
+                document.getElementById("timeRemainingValue").textContent = data.time_limit;
+            }
+            if (data.code == "GUESS") {
+                if (data.results.length > 0) {
+                    for (const place of data.results) {
+                        addPlace(place, data.name, data.colour);
+                        enteredPlaces.push(place.name.toLowerCase().trim().replaceAll(" ",""));
+                        // document.getElementById("placesHeader").textContent = `Places Entered: ${numPlaces} / ${totalPlaces}`;
+                    }
+                    if (data.is_self) {
+                        document.getElementById("placeInput").value = "";
+                        document.getElementById("placeInput").focus();
+                        document.getElementById("message").textContent = "⠀";
+                    }
+                } else {
+                    document.getElementById("message").textContent = data.message;
+                }
+                if (data.is_self) {
+                    document.getElementById("placeInput").disabled = false;
+                    document.getElementById("placeSubmitButton").disabled = false;
+                }
+            }
         }
         // ws.send(JSON.stringify({type: "JOIN", name: document.getElementById("nameInput").value.trim() || "Anonymous"}));
         const total = await fetch(`/placenamegame/howmany?type=${type}`);
         const totalData = await total.json();
         totalPlaces = totalData.total;
-        document.getElementById("placesHeader").textContent = `Places Entered: ${numPlaces} / ${totalPlaces}`;
+        // document.getElementById("placesHeader").textContent = `Places Entered: ${numPlaces} / ${totalPlaces}`;
         // console.log(data);
         document.getElementById("loading").style.display = "none";
         document.getElementById("main").style.display = "block";
@@ -294,42 +311,42 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
     init();
 
-    document.getElementById("nameInput").addEventListener("blur", async (event) => {
-        const name = event.target.value.trim();
-        if (name) {
-            const response = await fetch(`/placenamegame/setname?type=${type}&name=${encodeURIComponent(name)}`, { credentials: 'include' });
-            if (!response.ok) {
-                console.error("Failed to set name");
-                return;
-            }
-            const data = await response.json();
-            console.log(data);
-        }
-    });
+    // document.getElementById("nameInput").addEventListener("blur", async (event) => {
+    //     const name = event.target.value.trim();
+    //     if (name) {
+    //         const response = await fetch(`/placenamegame/setname?type=${type}&name=${encodeURIComponent(name)}`, { credentials: 'include' });
+    //         if (!response.ok) {
+    //             console.error("Failed to set name");
+    //             return;
+    //         }
+    //         const data = await response.json();
+    //         console.log(data);
+    //     }
+    // });
 
-    document.getElementById("finishButton").addEventListener("click", async () => {
-        const name = document.getElementById("nameInput").value.trim() || "Anonymous";
-        const response = await fetch(`/placenamegame/finish?type=${type}&name=${encodeURIComponent(name)}`, { credentials: 'include' });
-        if (!response.ok) {
-            console.error("Failed to finish game");
-            window.location.reload();
-            return;
-        }
-        const data = await response.json();
-        console.log(data);
-        window.location.href = `/placenamegame/results?uid=${data.uid}`;
-    });
+    // document.getElementById("finishButton").addEventListener("click", async () => {
+    //     const name = document.getElementById("nameInput").value.trim() || "Anonymous";
+    //     const response = await fetch(`/placenamegame/finish?type=${type}&name=${encodeURIComponent(name)}`, { credentials: 'include' });
+    //     if (!response.ok) {
+    //         console.error("Failed to finish game");
+    //         window.location.reload();
+    //         return;
+    //     }
+    //     const data = await response.json();
+    //     console.log(data);
+    //     window.location.href = `/placenamegame/results?uid=${data.uid}`;
+    // });
     
-    document.getElementById("resetButton").addEventListener("click", async () => {
-        const response = await fetch(`/placenamegame/reset?type=${type}`, { credentials: 'include' });
-        if (!response.ok) {
-            console.error("Failed to reset game");
-            return;
-        }
-        const data = await response.json();
-        console.log(data);
-        window.location.href = `/placenamegame/game?type=${type}`;
-    });
+    // document.getElementById("resetButton").addEventListener("click", async () => {
+    //     const response = await fetch(`/placenamegame/reset?type=${type}`, { credentials: 'include' });
+    //     if (!response.ok) {
+    //         console.error("Failed to reset game");
+    //         return;
+    //     }
+    //     const data = await response.json();
+    //     console.log(data);
+    //     window.location.href = `/placenamegame/game?type=${type}`;
+    // });
 
 });
 
