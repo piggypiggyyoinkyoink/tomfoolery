@@ -9,7 +9,7 @@ import uuid
 import json
 import os
 import datetime
-import websockets
+from operator import itemgetter
 import random
 
 if not os.path.exists("gamedata"):
@@ -389,6 +389,9 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
             await websocket.send_json({"code":"JOIN", "uid": userid, "name": room_data["players"][userid]["name"]})
         # Send the current state of the room to the new player
         rooms[room_id] = room_data  # Update the room data with the new ws connection
+        if room_data["status"] == "in_progress":
+            for userid in room_data["players"]:
+                await websocket.send_json({"code":"GUESS", "results": room_data["players"][userid]["guesses"], "already_guessed": False, "uid": userid, "is_self": userid == uid, "colour": COLOURS[list(room_data["players"].keys()).index(userid) % len(COLOURS)], "name": room_data["players"][userid]["name"] })
     try:
         while True:
             data = await websocket.receive_json()
@@ -484,6 +487,20 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                     for userid in room_data["players"]:
                         for ws in room_data["players"][userid]["websockets"]:
                             await ws.send_json({"code":"GUESS", "results": results_list, "already_guessed": already_guessed, "uid": uid, "is_self": userid == uid, "colour": colour, "name": room_data["players"][uid]["name"]})
+            
+            elif data.get("code") == "TIME_UP":
+                if datetime.datetime.now().timestamp() - room_data["started_at"] > room_data["time_limit"]*60 - 0.5: #0.5s to allow for small inaccuracies
+                    results = []
+                    for userid in room_data["players"]:
+                        results.append({"uid": userid, "name": room_data["players"][userid]["name"], "count": room_data["players"][userid]["count"]})
+                    results.sort(key=itemgetter("count"), reverse=True)
+                    for userid in room_data["players"]:
+                        for ws in room_data["players"][userid]["websockets"]:
+                            await ws.send_json({"code":"END_GAME", "results": results})
+                else:
+                    await websocket.send_json({"code":"TIME_REMAINING", "started_at": room_data["started_at"], "time_limit": room_data["time_limit"]}) # in seconds
+
+
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for room {room_id}")
         # room_data = rooms[room_id]

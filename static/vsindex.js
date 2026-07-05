@@ -3,7 +3,7 @@ const height = 750;
 
 const svg = d3.select("#map");
 let projection;
-let enteredPlaces = [];
+let enteredPlaces = {};
 let numPlaces = 0;
 let totalPlaces;
 let type;
@@ -11,7 +11,8 @@ let regionName;
 let uids = [];
 var ws;
 let colour;
-let i = 0;
+// let i = 0;
+let timerInterval;
 window.addEventListener("DOMContentLoaded", async () => {
     async function fetchGeoJSON(type) {
         const res = await fetch("/placenamegame/typemap");
@@ -173,6 +174,22 @@ window.addEventListener("DOMContentLoaded", async () => {
                 document.getElementById("placeInput").focus();
             });
         }
+
+        function startTimer(startedAt, timeLimit) {
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now()/1000 - startedAt));
+                const remaining = timeLimit*60 - elapsed;
+                document.getElementById("timeRemainingMinutes").textContent = Math.max(0, Math.floor(remaining / 60));
+                document.getElementById("timeRemainingSeconds").textContent = String(Math.max(0, remaining % 60)).padStart(2, '0');
+                if (remaining <= 0) {
+                    clearInterval(timerInterval);
+                    document.getElementById("timeRemainingMinutes").textContent = "0";
+                    document.getElementById("timeRemainingSeconds").textContent = "00";
+                    ws.send(JSON.stringify({code: "TIME_UP"}));
+                }
+            }, 100); //10th of a second accuracy
+        }
+
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
             console.log(`"${data.code}" message received:`, data);
@@ -234,6 +251,10 @@ window.addEventListener("DOMContentLoaded", async () => {
                 } else if (data.status == "in_progress") {
                     switchToGameplay();
                     colour = data.colour;
+                    const timeRemaining = data.time_limit*60 - (Math.floor((Date.now()/1000 - data.started_at)));
+                    document.getElementById("timeRemainingMinutes").textContent = Math.max(0, Math.floor(timeRemaining / 60));
+                    document.getElementById("timeRemainingSeconds").textContent = String(Math.max(0, timeRemaining % 60)).padStart(2, '0');
+                    startTimer(data.started_at, data.time_limit);
                 }
             }
             if (data.code == "NAME_CHANGE") {
@@ -273,7 +294,9 @@ window.addEventListener("DOMContentLoaded", async () => {
             if (data.code == "START_GAME") {
                 switchToGameplay();
                 colour = data.colour;
-                document.getElementById("timeRemainingValue").textContent = data.time_limit;
+                document.getElementById("timeRemainingMinutes").textContent = data.time_limit;
+                document.getElementById("timeRemainingSeconds").textContent = "00";
+                startTimer(data.started_at, data.time_limit);
             }
             if (data.code == "GUESS") {
                 if (data.results.length > 0) {
@@ -295,6 +318,9 @@ window.addEventListener("DOMContentLoaded", async () => {
                     document.getElementById("placeSubmitButton").disabled = false;
                 }
             }
+            if (data.code == "TIME_REMAINING") {
+                startTimer(data.started_at, data.time_limit);
+            }
         }
         // ws.send(JSON.stringify({type: "JOIN", name: document.getElementById("nameInput").value.trim() || "Anonymous"}));
         const total = await fetch(`/placenamegame/howmany?type=${type}`);
@@ -311,42 +337,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
     init();
 
-    // document.getElementById("nameInput").addEventListener("blur", async (event) => {
-    //     const name = event.target.value.trim();
-    //     if (name) {
-    //         const response = await fetch(`/placenamegame/setname?type=${type}&name=${encodeURIComponent(name)}`, { credentials: 'include' });
-    //         if (!response.ok) {
-    //             console.error("Failed to set name");
-    //             return;
-    //         }
-    //         const data = await response.json();
-    //         console.log(data);
-    //     }
-    // });
-
-    // document.getElementById("finishButton").addEventListener("click", async () => {
-    //     const name = document.getElementById("nameInput").value.trim() || "Anonymous";
-    //     const response = await fetch(`/placenamegame/finish?type=${type}&name=${encodeURIComponent(name)}`, { credentials: 'include' });
-    //     if (!response.ok) {
-    //         console.error("Failed to finish game");
-    //         window.location.reload();
-    //         return;
-    //     }
-    //     const data = await response.json();
-    //     console.log(data);
-    //     window.location.href = `/placenamegame/results?uid=${data.uid}`;
-    // });
-    
-    // document.getElementById("resetButton").addEventListener("click", async () => {
-    //     const response = await fetch(`/placenamegame/reset?type=${type}`, { credentials: 'include' });
-    //     if (!response.ok) {
-    //         console.error("Failed to reset game");
-    //         return;
-    //     }
-    //     const data = await response.json();
-    //     console.log(data);
-    //     window.location.href = `/placenamegame/game?type=${type}`;
-    // });
 
 });
 
