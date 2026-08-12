@@ -214,7 +214,7 @@ window.addEventListener("DOMContentLoaded", async () => {
                     const playerList = document.getElementById("playerList");
                     playerList.innerHTML = "";
                     const li = document.createElement("li");
-                    li.innerHTML = `<input type = "text" id="playerNameInput" value="${playerName}">`
+                    li.innerHTML = `<input type = "text" id="playerNameInput" placeholder = "Enter your name...">`
                     playerList.appendChild(li);
                     li.addEventListener("input", async (event) => {
                         const newName = event.target.value.trim();
@@ -375,7 +375,7 @@ window.addEventListener("DOMContentLoaded", async () => {
                     prevCount = result.count;
                 }
                 const yourPlacesContainer = document.getElementById("yourPlacesContainer");
-                for (const place of data.places) {
+                for (const place of data.places.reverse()) {
                     const placeTable = document.getElementById("yourPlacesTable");
                     const row = placeTable.insertRow();
                     const cell0 = row.insertCell(0);
