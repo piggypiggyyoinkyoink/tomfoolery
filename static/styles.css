@@ -116,3 +116,24 @@ div.loading{
 #loadingText{
     color:#757474
 }
+
+#room-code-input-group{
+    width: 85%;
+    max-width: 400px;
+}
+
+#room-code-input{
+    border: 2px solid black;
+}
+#join-room-submit{
+    border: 2px solid black;
+}
+
+#leaderboardContainer{
+    max-height: 500px;
+    overflow-y: auto;
+}
+#yourPlacesContainer{
+    max-height: 500px;
+    overflow-y: auto;
+}

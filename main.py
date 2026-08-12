@@ -502,7 +502,9 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                 print(room_data["time_limit"])
                 print(int(room_data["time_limit"])*60-0.5)
                 if (datetime.datetime.now().timestamp() - float(room_data["started_at"])) > (int(room_data["time_limit"])*60 - 0.5): #0.5s to allow for small inaccuracies
-                    
+                    if room_data["status"] != "in_progress":
+                        await websocket.send_json({"error": "Game is not in progress"})
+                        continue
                     results = []
                     for userid in room_data["players"]:
                         results.append({"uid": userid, "name": room_data["players"][userid]["name"], "count": room_data["players"][userid]["count"]})

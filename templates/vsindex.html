@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>The Place Name Game</title>
+    <title>The Place Name Game: VS Mode</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
     <link rel="stylesheet" href="{{url_for('static', path='styles.css')}}">
     <meta property="og:title" content="{{type2}}: The Place Name Game" />
@@ -25,7 +25,7 @@
             <hr>
         </div>
         <div class = "container">
-            <div class = "row">
+            <div class = "row" id = "game" style = "display: none;">
                 <div class = "col-lg-auto c" id="l">
                     <!-- <h3>Map</h3> -->
                     <svg id="map" width="600" height="750"></svg><br>
@@ -34,13 +34,15 @@
                     <div id = "waiting">
                         <div id = "roomInfo">
                             <h1><b><span id = "roomCode">{{room_id}}</span></b></h1>
-                            <h3>Waiting for players...</h3>
-                            <p> Region: {{type}}</p>
+                            <h3> Region: {{type}}</h3>
                             <p>Duration: <span id="timeLimitValue">?</span> minute<span id="timeLimitPlural">s</span></p>
-                            <input type="range" class="form-range" min="1" max="60" value="5" id="timeLimitSlider" disabled style="display: none;">
-                            <p>Players in Room:</p>
+                            <input type="range" class="form-range" min="1" max="60" value="5" id="timeLimitSlider" disabled style="display: none; margin-bottom: 20px;">
+                            <p style = "margin-bottom: 1px;">
+                                <b>Lockout:</b> Once a place has been entered, noone else can enter it. The player with the most correct places entered wins.
+                            </p>
+                            <button type="button" class="btn btn-success" id="startGameButton" disabled style = "display: none; margin-left: auto; margin-right: auto; margin-top: 5px;">Start Game</button>
+                            <h4 class = "text-center" style = "margin-top: 20px;"><u>Players in Room:</u></h4>
                             <ul id = "playerList"></ul>
-                            <button type="button" class="btn btn-success" id="startGameButton" disabled style = "display: none;">Start Game</button>
                         </div>
                             
                     </div>
@@ -57,7 +59,7 @@
                         <br>
                         <p id="message">⠀</p>
                         <br>
-                        <h3 id = "placesHeader">0 Places Entered</h3>
+                        <h3 id = "placesHeader">Your Places: 0</h3>
                         <h4 id = "timeRemaining">Time Remaining: <b><span id="timeRemainingMinutes">?</span> : <span id="timeRemainingSeconds">?</span></b></h4>
                         <table class = "table table-striped" id = "placesTableHeader">
                             <thead>
@@ -78,20 +80,36 @@
                         </div>
                         <br>
                     </div>
-                    <div id = "results" style = "display: none;">
-                        <h3>Results</h3>
-                        <hr>
-                        <div id = "leaderboardContainer">
-                            <table class = "table table-striped" id = "leaderboardTable">
-                                <thead>
-                                    <tr>
-                                        <th scope="col">#</th>
-                                        <th scope="col">Name</th>
-                                        <th scope="col">Places Found</th>
-                                    </tr>
-                                </thead>
-                            </table>
-                        </div>
+                </div>
+            </div>
+            <div class = "row" id = "results" style = "display: none;">
+                <div class = "col-5 c">
+                    <h3>Leaderboard</h3>
+                    <hr>
+                    <div id = "leaderboardContainer">
+                        <table class = "table table-striped" id = "leaderboardTable">
+                            <thead>
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Places Found</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+                <div class = "col-5 c">
+                    <h3>Your Places</h3>
+                    <hr>
+                    <div id = "yourPlacesContainer">
+                        <table class = "table table-striped" id = "yourPlacesTable">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Place</th>
+                                    <th scope="col">Region</th>
+                                </tr>
+                            </thead>
+                        </table>
                     </div>
                 </div>
             </div>

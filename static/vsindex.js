@@ -12,6 +12,7 @@ let uids = [];
 var ws;
 let colour;
 let numPlacesUser = 0;
+let gameEndedFlag = false;
 // let i = 0;
 let timerInterval;
 window.addEventListener("DOMContentLoaded", async () => {
@@ -26,7 +27,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         }
         const filename = typemap[type].geofile;
         regionName = typemap[type].name;
-        document.getElementById("h1").textContent = "How many places can you name in " + regionName + "?";
+        document.getElementById("h1").textContent = "VS Mode - " + regionName;
         const response = await fetch(`/placenamegame/static/geo/${filename}`);
         const geoData = await response.json();
         return geoData;
@@ -152,6 +153,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
         function switchToGameplay(){
             document.getElementById("roomInfo").style.display = "none";
+            document.getElementById("game").style.display = "flex";
             document.getElementById("gameplay").style.display = "block";
             document.getElementById("results").style.display = "none";
 
@@ -179,7 +181,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         function SwitchToResults(){
             document.getElementById("roomInfo").style.display = "none";
             document.getElementById("gameplay").style.display = "none";
-            document.getElementById("results").style.display = "block";
+            document.getElementById("game").style.display = "none";
+            document.getElementById("results").style.display = "flex";
         }
 
         function startTimer(startedAt, timeLimit) {
@@ -205,6 +208,9 @@ window.addEventListener("DOMContentLoaded", async () => {
                 const uid = data.uid;
                 uids.push(uid);
                 if (data.status == "waiting") {
+                    document.getElementById("game").style.display = "flex";
+                    document.getElementById("gameplay").style.display = "none";
+                    document.getElementById("results").style.display = "none";
                     const playerList = document.getElementById("playerList");
                     playerList.innerHTML = "";
                     const li = document.createElement("li");
@@ -228,6 +234,7 @@ window.addEventListener("DOMContentLoaded", async () => {
                     if (data.is_host) {
                         document.getElementById("timeLimitSlider").disabled = false;
                         document.getElementById("timeLimitSlider").style.display = "block";
+                        document.getElementById("timeLimitSlider").value = data.time_limit;
                         document.getElementById("timeLimitSlider").addEventListener("input", (event) => {
                             const timeLimit = event.target.value;
                             document.getElementById("timeLimitValue").textContent = timeLimit;
@@ -320,7 +327,7 @@ window.addEventListener("DOMContentLoaded", async () => {
                         document.getElementById("placeInput").focus();
                         document.getElementById("message").textContent = "⠀";
                         numPlacesUser += data.results.length;
-                        document.getElementById("placesHeader").textContent = `${numPlacesUser} Places Entered`;
+                        document.getElementById("placesHeader").textContent = `Your Places: ${numPlacesUser}`;
                     }
                 } else {
                     document.getElementById("message").textContent = data.message;
@@ -330,10 +337,20 @@ window.addEventListener("DOMContentLoaded", async () => {
                 startTimer(data.started_at, data.time_limit);
             }
             if (data.code == "END_GAME") {
+                if (gameEndedFlag) {
+                    return;
+                }
+                gameEndedFlag = true;
                 SwitchToResults();
                 const resultsTable = document.getElementById("leaderboardTable");
                 let p = 1;
+                const leaderboardContainer = document.getElementById("leaderboardContainer");
+                document.getElementById("h1").textContent = "Game Results - " + regionName;
+                let prevCount = 9999999999;
                 for (const result of data.results) {
+                    if (result.count === prevCount) {
+                        p--;
+                    }
                     const row = resultsTable.insertRow();
                     const cell0 = row.insertCell(0);
                     cell0.textContent = p;
@@ -352,7 +369,22 @@ window.addEventListener("DOMContentLoaded", async () => {
                         row.style.fontWeight = "bold";
                     }
                     p++;
-                    console.log("result:", result);
+                    if (leaderboardContainer.style.overflowY != "scroll" && leaderboardContainer.offsetHeight >= parseInt(window.getComputedStyle(leaderboardContainer).maxHeight)) {
+                        leaderboardContainer.style.overflowY = "scroll";
+                    }
+                    prevCount = result.count;
+                }
+                const yourPlacesContainer = document.getElementById("yourPlacesContainer");
+                for (const place of data.places) {
+                    const placeTable = document.getElementById("yourPlacesTable");
+                    const row = placeTable.insertRow();
+                    const cell0 = row.insertCell(0);
+                    cell0.textContent = place.name;
+                    const cell1 = row.insertCell(1);
+                    cell1.textContent = place.county;
+                    if (yourPlacesContainer.style.overflowY != "scroll" && yourPlacesContainer.offsetHeight >= parseInt(window.getComputedStyle(yourPlacesContainer).maxHeight)) {
+                        yourPlacesContainer.style.overflowY = "scroll";
+                    }
                 }
             }
         }
