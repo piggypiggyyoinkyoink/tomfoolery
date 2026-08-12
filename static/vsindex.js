@@ -128,7 +128,11 @@ window.addEventListener("DOMContentLoaded", async () => {
         type = searchParams.get("type")|| "uk";
         roomId = searchParams.get("room_id");
         await drawMap();
-        ws = new WebSocket(`ws://${window.location.host}/placenamegame/vs/room/${roomId}`);
+        if (window.location.hostname == "localhost") {
+            ws = new WebSocket(`ws://${window.location.host}/placenamegame/vs/room/${roomId}`);
+        } else {
+            ws = new WebSocket(`wss://${window.location.host}/placenamegame/vs/room/${roomId}`);
+        }
 
         async function processPlaceInput() {
             const placeInput = document.getElementById("placeInput");
