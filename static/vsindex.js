@@ -3,7 +3,7 @@ const height = 750;
 
 const svg = d3.select("#map");
 let projection;
-let enteredPlaces = {};
+let enteredPlaces = [];
 let numPlaces = 0;
 let totalPlaces;
 let type;
@@ -79,33 +79,34 @@ window.addEventListener("DOMContentLoaded", async () => {
             .attr("fill", "rgb(7, 163, 7)");
     }
 
-    function addToTable(username, place, county){
+    function addToTable(username, place, county, colour){
         const name = place.name;
         const table = document.getElementById("placesTable");
         const row = table.insertRow(0);
-        row.setAttribute("id", `row-${numPlaces}`);
+        row.setAttribute("name", `row-${numPlaces}`);
+        row.style.backgroundColor = colour;
         const cell0 = row.insertCell(0);
-        cell0.textContent = numPlaces;
+        cell0.textContent = username;
         const cell1 = row.insertCell(1);
         cell1.textContent = name + ", " + county;
         const tableContainer = document.getElementById("tableContainer");
         if (tableContainer.style.overflowY != "scroll" && tableContainer.offsetHeight >= parseInt(window.getComputedStyle(tableContainer).maxHeight)) {
             tableContainer.style.overflowY = "scroll";
         }
-        document.getElementById(`row-${numPlaces}`).addEventListener("mouseover", () => {
+        row.addEventListener("mouseover", () => {
             highlightPlace(numPlaces, place.lat, place.lon);
         });
-        document.getElementById(`row-${numPlaces}`).addEventListener("mouseout", () => {
+        row.addEventListener("mouseout", () => {
             const highlightCircle = document.getElementById(`highlight-${numPlaces}`);
             if (highlightCircle) {
                 highlightCircle.remove();
             }
         });
-        document.getElementById(`row-${numPlaces}`).addEventListener("touchstart", () => {
+        row.addEventListener("touchstart", () => {
             document.querySelectorAll(".highlight-circle").forEach(circle => circle.remove());
             highlightPlace(numPlaces, place.lat, place.lon);
         });
-        document.getElementById(`row-${numPlaces}`).addEventListener("touchend", () => {
+        row.addEventListener("touchend", () => {
             const highlightCircle = document.getElementById(`highlight-${numPlaces}`);
             if (highlightCircle) {
                 highlightCircle.remove();
@@ -114,11 +115,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
     function addPlace(place, username, colour){
         addToMap({ latitude: place.lat, longitude: place.lon }, colour);
-        // COLOURS = ["rgba(255,0,0,0.5)", "rgba(0,127,0,0.5)", "rgba(0,0,255,0.5)", "rgba(0,117,220,0.5)", "rgba(153,63,0,0.5)", "rgba(76,0,92,0.5)", "rgba(0,92,49,0.5)", "rgba(128,128,128,0.5)", "rgba(157,204,0,0.5)", "rgba(194,0,136,0.5)", "rgba(0,51,128,0.5)", "rgba(240,84,104,0.5)", "rgba(0,153,143,0.5)", "rgba(255, 102, 0, 0.5)", "rgba(153,0,0,0.5)",  "rgba(240,163,255,0.5)"]
-        // addToMap({ latitude: place.lat, longitude: place.lon }, COLOURS[i]);
-        // i++;
         numPlaces++;
-        addToTable(username, place, place.county);
+        addToTable(username, place, place.county, colour);
     }
 
 
@@ -303,7 +301,6 @@ window.addEventListener("DOMContentLoaded", async () => {
                     for (const place of data.results) {
                         addPlace(place, data.name, data.colour);
                         enteredPlaces.push(place.name.toLowerCase().trim().replaceAll(" ",""));
-                        // document.getElementById("placesHeader").textContent = `Places Entered: ${numPlaces} / ${totalPlaces}`;
                     }
                     if (data.is_self) {
                         document.getElementById("placeInput").value = "";

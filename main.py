@@ -439,7 +439,7 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                         i += 1
             
             elif data.get("code") == "GUESS":
-                if datetime.datetime.now().timestamp() - room_data["started_at"] > room_data["time_limit"]*60:
+                if datetime.datetime.now().timestamp() - room_data["started_at"] > int(room_data["time_limit"])*60:
                     await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": False, "message": "Time's up!"})
                     continue
                 text = data.get("text", "")
@@ -489,7 +489,7 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                             await ws.send_json({"code":"GUESS", "results": results_list, "already_guessed": already_guessed, "uid": uid, "is_self": userid == uid, "colour": colour, "name": room_data["players"][uid]["name"]})
             
             elif data.get("code") == "TIME_UP":
-                if datetime.datetime.now().timestamp() - room_data["started_at"] > room_data["time_limit"]*60 - 0.5: #0.5s to allow for small inaccuracies
+                if datetime.datetime.now().timestamp() - int(room_data["started_at"]) > int(room_data["time_limit"]*60 - 0.5): #0.5s to allow for small inaccuracies
                     results = []
                     for userid in room_data["players"]:
                         results.append({"uid": userid, "name": room_data["players"][userid]["name"], "count": room_data["players"][userid]["count"]})
