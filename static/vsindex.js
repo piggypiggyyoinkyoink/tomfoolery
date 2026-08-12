@@ -11,6 +11,7 @@ let regionName;
 let uids = [];
 var ws;
 let colour;
+let numPlacesUser = 0;
 // let i = 0;
 let timerInterval;
 window.addEventListener("DOMContentLoaded", async () => {
@@ -152,6 +153,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         function switchToGameplay(){
             document.getElementById("roomInfo").style.display = "none";
             document.getElementById("gameplay").style.display = "block";
+            document.getElementById("results").style.display = "none";
+
             document.getElementById("placeInput").disabled = false;
             document.getElementById("placeSubmitButton").disabled = false;
             document.getElementById("placeInput").focus();
@@ -171,6 +174,12 @@ window.addEventListener("DOMContentLoaded", async () => {
                 document.getElementById("placeInput").disabled = false;
                 document.getElementById("placeInput").focus();
             });
+        }
+
+        function SwitchToResults(){
+            document.getElementById("roomInfo").style.display = "none";
+            document.getElementById("gameplay").style.display = "none";
+            document.getElementById("results").style.display = "block";
         }
 
         function startTimer(startedAt, timeLimit) {
@@ -297,6 +306,10 @@ window.addEventListener("DOMContentLoaded", async () => {
                 startTimer(data.started_at, data.time_limit);
             }
             if (data.code == "GUESS") {
+                if (data.is_self) {
+                    document.getElementById("placeInput").disabled = false;
+                    document.getElementById("placeSubmitButton").disabled = false;
+                }
                 if (data.results.length > 0) {
                     for (const place of data.results) {
                         addPlace(place, data.name, data.colour);
@@ -306,17 +319,41 @@ window.addEventListener("DOMContentLoaded", async () => {
                         document.getElementById("placeInput").value = "";
                         document.getElementById("placeInput").focus();
                         document.getElementById("message").textContent = "⠀";
+                        numPlacesUser += data.results.length;
+                        document.getElementById("placesHeader").textContent = `${numPlacesUser} Places Entered`;
                     }
                 } else {
                     document.getElementById("message").textContent = data.message;
                 }
-                if (data.is_self) {
-                    document.getElementById("placeInput").disabled = false;
-                    document.getElementById("placeSubmitButton").disabled = false;
-                }
             }
             if (data.code == "TIME_REMAINING") {
                 startTimer(data.started_at, data.time_limit);
+            }
+            if (data.code == "END_GAME") {
+                SwitchToResults();
+                const resultsTable = document.getElementById("leaderboardTable");
+                let p = 1;
+                for (const result of data.results) {
+                    const row = resultsTable.insertRow();
+                    const cell0 = row.insertCell(0);
+                    cell0.textContent = p;
+                    const cell1 = row.insertCell(1);
+                    cell1.textContent = result.name;
+                    const cell2 = row.insertCell(2);
+                    cell2.textContent = result.count;
+                    if (p == 1) {
+                        row.style.backgroundColor = "#ffc107";
+                    } else if (p == 2) {
+                        row.style.backgroundColor = "#c0c0c0";
+                    } else if (p == 3) {
+                        row.style.backgroundColor = "#cd7f32";
+                    }
+                    if (result.uid == data.uid) {
+                        row.style.fontWeight = "bold";
+                    }
+                    p++;
+                    console.log("result:", result);
+                }
             }
         }
         // ws.send(JSON.stringify({type: "JOIN", name: document.getElementById("nameInput").value.trim() || "Anonymous"}));

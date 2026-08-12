@@ -392,6 +392,12 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
         if room_data["status"] == "in_progress":
             for userid in room_data["players"]:
                 await websocket.send_json({"code":"GUESS", "results": room_data["players"][userid]["guesses"], "already_guessed": False, "uid": userid, "is_self": userid == uid, "colour": COLOURS[list(room_data["players"].keys()).index(userid) % len(COLOURS)], "name": room_data["players"][userid]["name"] })
+        elif room_data["status"] == "ended":
+            results = []
+            for userid in room_data["players"]:
+                results.append({"uid": userid, "name": room_data["players"][userid]["name"], "count": room_data["players"][userid]["count"]})
+            results.sort(key=itemgetter("count"), reverse=True)
+            await websocket.send_json({"code":"END_GAME", "results": results, "places": room_data["players"][uid]["guesses"], "uid": uid})
     try:
         while True:
             data = await websocket.receive_json()
@@ -478,26 +484,36 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                 rooms[room_id] = room_data  # Update the room data with the new guesses
                 
                 if len(results_list) == 0 and not (already_guessed or flag):
-                    await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": False, "message": "Place not found!"})
+                    await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": False, "is_self": userid == uid, "message": "Place not found!"})
                 elif len(results_list) == 0 and already_guessed:
-                    await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": True, "message": "Already guessed!"})
+                    await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": True, "is_self": userid == uid, "message": "Already guessed!"})
                 elif len(results_list) == 0 and flag:
-                    await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": False, "message": "Already guessed by another player!"})
+                    await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": False, "is_self": userid == uid, "message": "Already guessed by another player!"})
                 else:
                     for userid in room_data["players"]:
                         for ws in room_data["players"][userid]["websockets"]:
                             await ws.send_json({"code":"GUESS", "results": results_list, "already_guessed": already_guessed, "uid": uid, "is_self": userid == uid, "colour": colour, "name": room_data["players"][uid]["name"]})
             
             elif data.get("code") == "TIME_UP":
-                if datetime.datetime.now().timestamp() - int(room_data["started_at"]) > int(room_data["time_limit"]*60 - 0.5): #0.5s to allow for small inaccuracies
+                # server-side validation
+                print(datetime.datetime.now().timestamp())
+                print(float(room_data["started_at"]))
+                print(datetime.datetime.now().timestamp() - float(room_data["started_at"]))
+                print(room_data["time_limit"])
+                print(int(room_data["time_limit"])*60-0.5)
+                if (datetime.datetime.now().timestamp() - float(room_data["started_at"])) > (int(room_data["time_limit"])*60 - 0.5): #0.5s to allow for small inaccuracies
+                    
                     results = []
                     for userid in room_data["players"]:
                         results.append({"uid": userid, "name": room_data["players"][userid]["name"], "count": room_data["players"][userid]["count"]})
                     results.sort(key=itemgetter("count"), reverse=True)
                     for userid in room_data["players"]:
                         for ws in room_data["players"][userid]["websockets"]:
-                            await ws.send_json({"code":"END_GAME", "results": results})
+                            await ws.send_json({"code":"END_GAME", "results": results, "places": room_data["players"][userid]["guesses"], "uid":userid})
+                    room_data["status"] = "ended"
+                    rooms[room_id] = room_data  # Update the room data with the new status
                 else:
+                    # send correct time remaining if client is out of sync
                     await websocket.send_json({"code":"TIME_REMAINING", "started_at": room_data["started_at"], "time_limit": room_data["time_limit"]}) # in seconds
 
 
@@ -510,9 +526,6 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                 room_data["players"][uid]["websockets"].remove(websocket)
                 rooms[room_id] = room_data  # Update the room data after removing the websocket
             if room_data["status"] == "waiting" and not room_data["players"][uid]["websockets"]:
-                # If the player has no more active websockets, remove them from the room
-                # del room_data["players"][uid]
-                # rooms[room_id] = room_data  # Update the room data after removing the player
                 # Broadcast to all remaining players that this player has left
                 for userid in room_data["players"]:
                     for ws in room_data["players"][userid]["websockets"]:
