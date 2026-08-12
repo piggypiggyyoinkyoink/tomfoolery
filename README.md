@@ -4,7 +4,16 @@ Try now at https://the.piggypiggyyoinkyoink.website/placenamegame/
 
 Note: Due to financial constraints, this is currently hosted on a potato. Latency may be... less than ideal.  
 
-## Game modes
+## Game Modes
+**Solo**: See how many places you can name in the selected region. No time limit, no pressure. Upon ending the game, you can copy a permanent link to your results.  
+
+**VS**: Create or join rooms with your friends to see who knows the most place names.  
+- Normal: *Coming Soon!*  
+- Lockout: Once one player has entered a place name, noone else can! The player with the most places named within the time limit wins.  
+
+Note: Places that share a name with each other DO count as multiple places in all modes.
+
+## Regions
 - Whole UK (30k+ places)
 - England
 - Scotland
