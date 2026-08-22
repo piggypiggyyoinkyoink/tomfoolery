@@ -1,5 +1,5 @@
-const width = 600;
-const height = 750;
+let width = 600;
+let height = 750;
 
 const svg = d3.select("#map");
 let projection;
@@ -123,6 +123,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         const data = await response.json();
         const name = data.name || "Anonymous";
         type = data.type;
+        const mapSvg = document.getElementById("map");
+        d3.select(mapSvg).attr("viewBox", `0 0 ${width} ${height}`);
         await drawMap();
         const date = new Date(data.date);
         document.getElementById("details").innerHTML = `Submitted by <b>${name}</b> on ${date.toLocaleString()}. &nbsp;&nbsp; `;

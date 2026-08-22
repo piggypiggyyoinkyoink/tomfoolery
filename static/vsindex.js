@@ -127,6 +127,8 @@ window.addEventListener("DOMContentLoaded", async () => {
         const searchParams = new URLSearchParams(paramsString)
         type = searchParams.get("type")|| "uk";
         roomId = searchParams.get("room_id");
+        const mapSvg = document.getElementById("map");
+        d3.select(mapSvg).attr("viewBox", `0 0 ${width} ${height}`);
         await drawMap();
         if (window.location.hostname == "localhost") {
             ws = new WebSocket(`ws://${window.location.host}/placenamegame/vs/room/${roomId}`);

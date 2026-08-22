@@ -105,6 +105,83 @@ div.top{
     font-family: "Karla", sans-serif;
 }
 
+/* ---------- Mobile-friendly scaling ---------- */
+/* Generated using AI (ox-alpha) */
+/* Scale the fixed-size SVG maps down to fit small screens */
+svg#map{
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 600 / 750;
+}
+
+#playerNameInput{
+    font-size: 1rem;
+}
+
+/* Prevent iOS auto-zoom on focus: inputs must be >= 16px */
+@media (max-width: 575.98px){
+    #placeInput,
+    #placeSubmitButton{
+        font-size: 1rem;
+    }
+
+    #nameInput{
+        font-size: 1rem;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    #room-code-input,
+    #join-room-submit{
+        font-size: 1rem;
+    }
+
+    h1{
+        font-size: 1.5rem;
+    }
+
+    h2{
+        font-size: 1.25rem;
+    }
+
+    h3{
+        font-size: 1.1rem;
+    }
+
+    p{
+        font-size: 0.95rem;
+    }
+
+    /* Keep tables readable and tappable on small screens */
+    table{
+        font-size: 0.95rem;
+    }
+
+    .btn{
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+
+    /* Tighten container padding so content uses more of the screen */
+    .container{
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    #tableContainer{
+        max-height: 45vh;
+    }
+}
+
+/* Larger tap targets for table rows on touch devices */
+@media (hover: none) and (pointer: coarse){
+    #placesTable td{
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+    }
+}
+/* ---------- End Mobile-friendly scaling ---------- */
+
 div.loading{
     position: absolute;
     top: 50%;

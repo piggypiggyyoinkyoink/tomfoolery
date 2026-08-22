@@ -1,5 +1,5 @@
-const width = 600;
-const height = 750;
+let width = 600;
+let height = 750;
 
 const svg = d3.select("#map");
 let projection;
@@ -166,9 +166,12 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 
     async function init(){
+        
         const paramsString = window.location.search;
         const searchParams = new URLSearchParams(paramsString)
         type = searchParams.get("type")|| "uk";
+        const mapSvg = document.getElementById("map");
+        d3.select(mapSvg).attr("viewBox", `0 0 ${width} ${height}`);
         await drawMap();
         const response = await fetch(`./init?type=${type}`, { credentials: 'include' });
         if (!response.ok) {
