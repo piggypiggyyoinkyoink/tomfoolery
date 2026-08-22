@@ -21,7 +21,7 @@ window.addEventListener("DOMContentLoaded", async () => {
         const typemap = await res.json();
         console.log(typemap);
         if (!typemap[type]) {
-            throw new Error(`Invalid type: ${type}`);
+            console.error(`Invalid type: ${type}`);
             window.location.href = "./"; 
             return;
         }
