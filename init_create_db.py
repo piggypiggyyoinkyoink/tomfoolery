@@ -1,12 +1,18 @@
-import json, sqlite3
+import json, sqlite3, os
 from get_county import get_county_from_coordinates
 
 file = open("placenames.geojson", "r", encoding="utf-8")
 data = json.load(file)
 features = data["features"]
 print(len(features))
-con = sqlite3.connect("data.db")
-cur = con.cursor()
+if not os.path.exists("data.db"):
+    con = sqlite3.connect("data.db")
+    cur = con.cursor()
+    cur.execute("CREATE TABLE data (lat REAL, lon REAL, name TEXT, name_norm TEXT, type TEXT, county TEXT)")
+    con.commit()
+else:
+    con = sqlite3.connect("data.db")
+    cur = con.cursor()
 for feature in features:
     properties = feature["properties"]
     name = properties.get("name", None)
@@ -36,4 +42,5 @@ for feature in features:
             county = get_county_from_coordinates(lat, lon)
             cur.execute("INSERT INTO data (lat, lon, name, name_norm, type, county) VALUES (?, ?, ?, ?, ?, ?)", (lat, lon, name, name_norm, typ, county))
             con.commit()
+cur.close()
 con.close()

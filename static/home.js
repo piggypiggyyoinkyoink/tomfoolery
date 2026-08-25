@@ -4,9 +4,6 @@ let typemap;
 
 window.addEventListener("DOMContentLoaded", async () => {
     async function fetchGeoJSON(type) {
-        // const res = await fetch("/typemap");
-        // const typemap = await res.json();
-        // console.log(typemap);
         if (!typemap[type]) {
             console.error(`Invalid type: ${type}`);
             window.location.href = "./"; 
@@ -49,7 +46,6 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     async function createCard(type, data, category){
         const card = document.createElement("div");
-        // card.setAttribute("style", " margin: 10px;");
         card.setAttribute("class", "crd col-11 col-sm-6 col-md-4 col-lg-3");
         card.setAttribute("id", `card-${type}`);
         const cardInner = document.createElement("div");
@@ -67,20 +63,12 @@ window.addEventListener("DOMContentLoaded", async () => {
         }
         cardTitle.textContent = data.name;
         cardInner.appendChild(cardTitle);
-        // const res = await fetch(`/howmany?type=${type}`);
-        // const howmany = await res.json();
         const total = data.total;
         const cardText = document.createElement("p");
         cardText.setAttribute("class", "card-text");
         cardText.textContent = `${total} places`;
         cardInner.appendChild(cardText);
-        // console.log(howmany);
         document.getElementById(`${category}-card-container`).appendChild(card);
-        // const containerElem = document.getElementById(`map-container-${type}`);
-        // let width = window.getComputedStyle(containerElem).width;
-        // let height = window.getComputedStyle(containerElem).height;
-        // width = parseInt(width);
-        // await drawMap(width, type);
         document.getElementById(`card-${type}`).addEventListener("click", () => {
             window.location.href = `./game?type=${type}`;
         });

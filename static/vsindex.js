@@ -394,12 +394,9 @@ window.addEventListener("DOMContentLoaded", async () => {
                 }
             }
         }
-        // ws.send(JSON.stringify({type: "JOIN", name: document.getElementById("nameInput").value.trim() || "Anonymous"}));
         const total = await fetch(`/placenamegame/howmany?type=${type}`);
         const totalData = await total.json();
         totalPlaces = totalData.total;
-        // document.getElementById("placesHeader").textContent = `Places Entered: ${numPlaces} / ${totalPlaces}`;
-        // console.log(data);
         document.getElementById("loading").style.display = "none";
         document.getElementById("main").style.display = "block";
         const tableContainer = document.getElementById("tableContainer");

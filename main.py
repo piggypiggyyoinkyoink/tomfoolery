@@ -14,8 +14,6 @@ import random
 
 if not os.path.exists("gamedata"):
     os.makedirs("gamedata")
-if not os.path.exists("gamedata/vs"):
-    os.makedirs("gamedata/vs")
 
 if not os.path.exists("data.db"):
     raise FileNotFoundError("data.db not found. Please ensure the database file exists.")
@@ -29,9 +27,6 @@ if not os.path.exists("static"):
 if not os.path.exists("templates"):
     raise FileNotFoundError("templates directory not found. Please ensure the template files exist.")
 
-# if not os.path.exists("rooms.json"):
-#     with open("rooms.json", "w") as f:
-#         json.dump({}, f)
 
 app = FastAPI(root_path="/placenamegame")
 
@@ -306,10 +301,7 @@ def create_room(type: str, uid_json: Annotated[str | None, Cookie()] = None):
     room_id = str(random.randint(0, 999999)).zfill(6)
 
     room_data = {"type": type, "host_uid": uid, "players": {uid: {"name": "Anonymous", "websockets": [], "guesses": [], "count": 0}}, "status": "waiting", "time_limit": 5, "created_at": datetime.datetime.now().timestamp(), "started_at": None}
-    # with open(f"gamedata/room_{room_id}.json", "w") as f:
-    #     json.dump(room_data, f)
     rooms[room_id] = room_data
-    # response = templates.TemplateResponse("vsroom.html", {"request": request, "room_id": room_id, "type": type})
     response = JSONResponse(content={"room_id": room_id, "type": type})
     response.set_cookie(key="uid_json", value=cookie_str, httponly=False)
     return response
@@ -376,14 +368,11 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
         await websocket.close()
         return
     else:
-        # await websocket.send_json({"message": "Connected to room", "room_id": room_id, "type": type, "uid": uid})
         room_data["players"][uid]["websockets"].append(websocket)  # Initialise the player's data in the room
         await websocket.send_json({"code":"INIT", "room_id": room_id, "type": room_data["type"], "is_host": room_data["host_uid"] == uid, "status": room_data["status"], "time_limit": room_data["time_limit"], "started_at": room_data["started_at"], "name": room_data["players"][uid]["name"], "uid": uid, "colour": COLOURS[list(room_data["players"].keys()).index(uid) % len(COLOURS)]})
-        # await websocket.send_json({"code":"INIT", "room_id": room_id, "type": room_data["type"], "is_host": room_data["host_uid"] == uid, "status": room_data["status"], "time_limit": room_data["time_limit"], "started_at": room_data["started_at"], "name": room_data["players"][uid]["name"], "uid": uid})
         for userid in room_data["players"]:
             # Send a JOIN message to all players in the room about the new player
             for ws in room_data["players"][userid]["websockets"]:
-                # if ws != websocket:  # Don't send the JOIN message to the new player
                 await ws.send_json({"code":"JOIN", "uid": uid, "name": room_data["players"][uid]["name"]})
             # Send a JOIN message to the new player about all existing players in the room
             await websocket.send_json({"code":"JOIN", "uid": userid, "name": room_data["players"][userid]["name"]})
@@ -464,7 +453,6 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                 cur.execute(f"SELECT name, lat, lon, county FROM data WHERE name_norm LIKE '%//{text}//%' AND county IN {tuple(valid_counties)}")
                 results = cur.fetchall()
                 con.close()
-                print(results)
                 results_list = []
                 already_guessed = False
                 flag = False
@@ -496,11 +484,6 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
             
             elif data.get("code") == "TIME_UP":
                 # server-side validation
-                print(datetime.datetime.now().timestamp())
-                print(float(room_data["started_at"]))
-                print(datetime.datetime.now().timestamp() - float(room_data["started_at"]))
-                print(room_data["time_limit"])
-                print(int(room_data["time_limit"])*60-0.5)
                 if (datetime.datetime.now().timestamp() - float(room_data["started_at"])) > (int(room_data["time_limit"])*60 - 0.5): #0.5s to allow for small inaccuracies
                     if room_data["status"] != "in_progress":
                         await websocket.send_json({"error": "Game is not in progress"})
@@ -514,13 +497,14 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                             await ws.send_json({"code":"END_GAME", "results": results, "places": room_data["players"][userid]["guesses"], "uid":userid})
                     room_data["status"] = "ended"
                     rooms[room_id] = room_data  # Update the room data with the new status
+                    del rooms[room_id]  # Remove the room from the global rooms dictionary after the game ends
                 else:
                     # send correct time remaining if client is out of sync
                     await websocket.send_json({"code":"TIME_REMAINING", "started_at": room_data["started_at"], "time_limit": room_data["time_limit"]}) # in seconds
 
 
     except WebSocketDisconnect:
-        print(f"WebSocket disconnected for room {room_id}")
+        print(f"WebSocket disconnected for user {uid} in room {room_id}")
         # room_data = rooms[room_id]
 
         if uid in room_data["players"]:

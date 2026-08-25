@@ -118,7 +118,6 @@ window.addEventListener("DOMContentLoaded", async () => {
         const paramsString = window.location.search;
         const searchParams = new URLSearchParams(paramsString)
         const uid = searchParams.get("uid");
-        // type = searchParams.get("type")|| "uk";
         const response = await fetch(`./data/${uid}`);
         const data = await response.json();
         const name = data.name || "Anonymous";
