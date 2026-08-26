@@ -38,7 +38,15 @@
                             <h3> Region: {{type}}</h3>
                             <p>Duration: <span id="timeLimitValue">?</span> minute<span id="timeLimitPlural">s</span></p>
                             <input type="range" class="form-range" min="1" max="60" value="5" id="timeLimitSlider" disabled style="display: none; margin-bottom: 20px;">
-                            <p style = "margin-bottom: 1px;">
+                            <p>Game Mode: <span id="gameModeValue">?</span></p>
+                            <input type ="radio" name = "gameMode" id = "normalRadio" value = "normal" disabled style = "display: none;" checked> 
+                            <label for="normalRadio" id = "normalLabel" style="display: none;">Normal</label>
+                            <input type ="radio" name = "gameMode" id = "lockoutRadio" value = "lockout" disabled style = "display: none;">
+                            <label for="lockoutRadio" id = "lockoutLabel" style="display: none;">Lockout</label>
+                            <p style = "margin-bottom: 1px; display: block;" id = "normalDescription">
+                                <b>Normal:</b> Players independently enter as many places they know. The player with the most correct places entered wins.
+                            </p>
+                            <p style = "margin-bottom: 1px; display: none;" id = "lockoutDescription">
                                 <b>Lockout:</b> Once a place has been entered, noone else can enter it. The player with the most correct places entered wins.
                             </p>
                             <button type="button" class="btn btn-success" id="startGameButton" disabled style = "display: none; margin-left: auto; margin-right: auto; margin-top: 5px;">Start Game</button>

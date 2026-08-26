@@ -184,7 +184,7 @@ window.addEventListener("DOMContentLoaded", async () => {
             });
         }
 
-        function SwitchToResults(){
+        function switchToResults(){
             document.getElementById("roomInfo").style.display = "none";
             document.getElementById("gameplay").style.display = "none";
             document.getElementById("game").style.display = "none";
@@ -236,8 +236,26 @@ window.addEventListener("DOMContentLoaded", async () => {
                         } else {
                             document.getElementById("timeLimitPlural").textContent = "s";
                         }
+                    
+                    switch (data.mode) {
+                        case "normal":
+                            document.getElementById("gameModeValue").textContent = "Normal";
+                            document.getElementById("normalDescription").style.display = "block";
+                            document.getElementById("lockoutDescription").style.display = "none";
+                            document.getElementById("normalRadio").checked = true;
+                            document.getElementById("lockoutRadio").checked = false;
+                            break;
+                        case "lockout":
+                            document.getElementById("gameModeValue").textContent = "Lockout";
+                            document.getElementById("normalDescription").style.display = "none";
+                            document.getElementById("lockoutDescription").style.display = "block";
+                            document.getElementById("normalRadio").checked = false;
+                            document.getElementById("lockoutRadio").checked = true;
+                            break;
+                    }
 
                     if (data.is_host) {
+                        // enable time limit slider
                         document.getElementById("timeLimitSlider").disabled = false;
                         document.getElementById("timeLimitSlider").style.display = "block";
                         document.getElementById("timeLimitSlider").value = data.time_limit;
@@ -261,7 +279,33 @@ window.addEventListener("DOMContentLoaded", async () => {
                             // only send the message once the user has finished adjusting the slider (on change event)
                             ws.send(JSON.stringify({code: "SET_TIME_LIMIT", time_limit: timeLimit}));
                         });
+                        
+                        // Enable game mode radio buttons
+                        document.getElementById("normalRadio").disabled = false;
+                        document.getElementById("normalRadio").style.display = "inline-block";
+                        document.getElementById("normalLabel").style.display = "inline-block";
+                        document.getElementById("lockoutRadio").disabled = false;
+                        document.getElementById("lockoutRadio").style.display = "inline-block";
+                        document.getElementById("lockoutLabel").style.display = "inline-block";
 
+                        document.getElementById("normalRadio").addEventListener("change", (event) => {
+                            if (event.target.checked) {
+                                document.getElementById("gameModeValue").textContent = "Normal";
+                                document.getElementById("lockoutDescription").style.display = "none";
+                                document.getElementById("normalDescription").style.display = "block";
+                                ws.send(JSON.stringify({code: "SET_GAME_MODE", mode: "normal"}));
+                            }
+                        });
+                        document.getElementById("lockoutRadio").addEventListener("change", (event) => {
+                            if (event.target.checked) {
+                                document.getElementById("gameModeValue").textContent = "Lockout";
+                                document.getElementById("normalDescription").style.display = "none";
+                                document.getElementById("lockoutDescription").style.display = "block";
+                                ws.send(JSON.stringify({code: "SET_GAME_MODE", mode: "lockout"}));
+                            }
+                        });
+
+                        // Enable start game button
                         document.getElementById("startGameButton").disabled = false;
                         document.getElementById("startGameButton").style.display = "block";
                         document.getElementById("startGameButton").addEventListener("click", () => {
@@ -292,6 +336,20 @@ window.addEventListener("DOMContentLoaded", async () => {
                     document.getElementById("timeLimitPlural").textContent = "";
                 } else {
                     document.getElementById("timeLimitPlural").textContent = "s";
+                }
+            }
+            if (data.code == "SET_GAME_MODE") {
+                switch (data.mode) {
+                    case "normal":
+                        document.getElementById("gameModeValue").textContent = "Normal";
+                        document.getElementById("normalDescription").style.display = "block";
+                        document.getElementById("lockoutDescription").style.display = "none";
+                        break;
+                    case "lockout":
+                        document.getElementById("gameModeValue").textContent = "Lockout";
+                        document.getElementById("normalDescription").style.display = "none";
+                        document.getElementById("lockoutDescription").style.display = "block";
+                        break;
                 }
             }
             if (data.code == "JOIN") {
@@ -347,7 +405,7 @@ window.addEventListener("DOMContentLoaded", async () => {
                     return;
                 }
                 gameEndedFlag = true;
-                SwitchToResults();
+                switchToResults();
                 const resultsTable = document.getElementById("leaderboardTable");
                 let p = 1;
                 const leaderboardContainer = document.getElementById("leaderboardContainer");
@@ -392,6 +450,10 @@ window.addEventListener("DOMContentLoaded", async () => {
                         yourPlacesContainer.style.overflowY = "scroll";
                     }
                 }
+            }
+            if (data.code == "ERROR") {
+                console.error("Error from server:", data.error);
+                // alert(`Error: ${data.error}`);
             }
         }
         const total = await fetch(`/placenamegame/howmany?type=${type}`);
