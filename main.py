@@ -495,7 +495,7 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                         await websocket.send_json({"code":"GUESS", "results": [], "already_guessed": True, "is_self": True, "message": "Already guessed!"})
                     else:
                         for ws in room_data["players"][uid]["websockets"]:
-                            await ws.send_json({"code":"GUESS", "results": results_list, "already_guessed": already_guessed, "uid": uid, "is_self": True, "colour": colour, "name": room_data["players"][uid]["name"]})
+                            await ws.send_json({"code":"GUESS", "results": results_list, "already_guessed": already_guessed, "uid": uid, "is_self": True, "colour": colour, "mode": room_data["mode"], "name": room_data["players"][uid]["name"]})
                 
                 elif room_data["mode"] == "lockout":
                     flag = False
@@ -523,7 +523,7 @@ async def handle_websocket(websocket: WebSocket, room_id: str, uid_json: Annotat
                     else:
                         for userid in room_data["players"]:
                             for ws in room_data["players"][userid]["websockets"]:
-                                await ws.send_json({"code":"GUESS", "results": results_list, "already_guessed": already_guessed, "uid": uid, "is_self": userid == uid, "colour": colour, "name": room_data["players"][uid]["name"]})
+                                await ws.send_json({"code":"GUESS", "results": results_list, "already_guessed": already_guessed, "uid": uid, "is_self": userid == uid, "colour": colour, "mode": room_data["mode"], "name": room_data["players"][uid]["name"]})
                             
             elif data.get("code") == "TIME_UP":
                 # server-side validation

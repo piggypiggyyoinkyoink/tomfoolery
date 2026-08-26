@@ -115,10 +115,16 @@ window.addEventListener("DOMContentLoaded", async () => {
             }
         });
     }
-    function addPlace(place, username, colour){
+    function addPlace(place, username, colour, isNormal=true){
         addToMap({ latitude: place.lat, longitude: place.lon }, colour);
         numPlaces++;
-        addToTable(username, place, place.county, colour);
+        if (isNormal) {
+            document.getElementById("placesTableHeader1").textContent = "#";
+            addToTable(numPlaces, place, place.county, "rgba(255, 255, 255, 0)");
+        }
+        else {
+            addToTable(username, place, place.county, colour);
+        }
     }
 
 
@@ -239,14 +245,14 @@ window.addEventListener("DOMContentLoaded", async () => {
                     
                     switch (data.mode) {
                         case "normal":
-                            document.getElementById("gameModeValue").textContent = "Normal";
+                            // document.getElementById("gameModeValue").textContent = "Normal";
                             document.getElementById("normalDescription").style.display = "block";
                             document.getElementById("lockoutDescription").style.display = "none";
                             document.getElementById("normalRadio").checked = true;
                             document.getElementById("lockoutRadio").checked = false;
                             break;
                         case "lockout":
-                            document.getElementById("gameModeValue").textContent = "Lockout";
+                            // document.getElementById("gameModeValue").textContent = "Lockout";
                             document.getElementById("normalDescription").style.display = "none";
                             document.getElementById("lockoutDescription").style.display = "block";
                             document.getElementById("normalRadio").checked = false;
@@ -282,15 +288,12 @@ window.addEventListener("DOMContentLoaded", async () => {
                         
                         // Enable game mode radio buttons
                         document.getElementById("normalRadio").disabled = false;
-                        document.getElementById("normalRadio").style.display = "inline-block";
-                        document.getElementById("normalLabel").style.display = "inline-block";
                         document.getElementById("lockoutRadio").disabled = false;
-                        document.getElementById("lockoutRadio").style.display = "inline-block";
-                        document.getElementById("lockoutLabel").style.display = "inline-block";
+                        document.getElementById("gameModeContainer").style.display = "block";
 
                         document.getElementById("normalRadio").addEventListener("change", (event) => {
                             if (event.target.checked) {
-                                document.getElementById("gameModeValue").textContent = "Normal";
+                                // document.getElementById("gameModeValue").textContent = "Normal";
                                 document.getElementById("lockoutDescription").style.display = "none";
                                 document.getElementById("normalDescription").style.display = "block";
                                 ws.send(JSON.stringify({code: "SET_GAME_MODE", mode: "normal"}));
@@ -298,7 +301,7 @@ window.addEventListener("DOMContentLoaded", async () => {
                         });
                         document.getElementById("lockoutRadio").addEventListener("change", (event) => {
                             if (event.target.checked) {
-                                document.getElementById("gameModeValue").textContent = "Lockout";
+                                // document.getElementById("gameModeValue").textContent = "Lockout";
                                 document.getElementById("normalDescription").style.display = "none";
                                 document.getElementById("lockoutDescription").style.display = "block";
                                 ws.send(JSON.stringify({code: "SET_GAME_MODE", mode: "lockout"}));
@@ -341,12 +344,12 @@ window.addEventListener("DOMContentLoaded", async () => {
             if (data.code == "SET_GAME_MODE") {
                 switch (data.mode) {
                     case "normal":
-                        document.getElementById("gameModeValue").textContent = "Normal";
+                        // document.getElementById("gameModeValue").textContent = "Normal";
                         document.getElementById("normalDescription").style.display = "block";
                         document.getElementById("lockoutDescription").style.display = "none";
                         break;
                     case "lockout":
-                        document.getElementById("gameModeValue").textContent = "Lockout";
+                        // document.getElementById("gameModeValue").textContent = "Lockout";
                         document.getElementById("normalDescription").style.display = "none";
                         document.getElementById("lockoutDescription").style.display = "block";
                         break;
@@ -383,7 +386,7 @@ window.addEventListener("DOMContentLoaded", async () => {
                 }
                 if (data.results.length > 0) {
                     for (const place of data.results) {
-                        addPlace(place, data.name, data.colour);
+                        addPlace(place, data.name, data.colour, data.mode == "normal");
                         enteredPlaces.push(place.name.toLowerCase().trim().replaceAll(" ",""));
                     }
                     if (data.is_self) {
