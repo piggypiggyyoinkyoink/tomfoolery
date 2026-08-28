@@ -1,6 +1,8 @@
 # The Place Name Game
-How many place names do you know in each region of the UK?  
-Try now at https://the.piggypiggyyoinkyoink.website/placenamegame/  
+### How many place names do you know in each region of the UK?
+### Think you know more UK place names than your friends?
+### Try now at https://the.piggypiggyyoinkyoink.website/placenamegame/  
+⠀  
 
 Note: Due to financial constraints, this is currently hosted on a potato. Latency may be... less than ideal.  
 
